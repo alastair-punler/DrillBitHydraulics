@@ -85,13 +85,29 @@
                         </div>
                         
                         <div class="mb-3">
-                            <label class="form-label">Nozzle Configuration</label>
-                            <div id="nozzleInputs">
-                                <!-- Nozzle inputs will be added here -->
+                            <label class="form-label">Input Method</label>
+                            <div class="btn-group w-100 mb-3" role="group">
+                                <input type="radio" class="btn-check" name="inputMethod" id="nozzleMethod" value="nozzle" checked>
+                                <label class="btn btn-outline-primary" for="nozzleMethod">Nozzle Configuration</label>
+                                
+                                <input type="radio" class="btn-check" name="inputMethod" id="tfaMethod" value="tfa">
+                                <label class="btn btn-outline-primary" for="tfaMethod">Direct TFA Input</label>
                             </div>
-                            <button type="button" class="btn btn-secondary mt-2" id="addNozzle" onclick="addNozzleRow()">
-                                Add Nozzle
-                            </button>
+                            
+                            <div id="nozzleConfigSection">
+                                <label class="form-label">Nozzle Configuration</label>
+                                <div id="nozzleInputs">
+                                    <!-- Nozzle inputs will be added here -->
+                                </div>
+                                <button type="button" class="btn btn-secondary mt-2" id="addNozzle" onclick="addNozzleRow()">
+                                    Add Nozzle
+                                </button>
+                            </div>
+                            
+                            <div id="tfaInputSection" style="display: none;">
+                                <label for="tfa_input" class="form-label">Total Flow Area (in²)</label>
+                                <input type="number" class="form-control" id="tfa_input" step="0.0001" min="0" placeholder="Enter TFA in square inches">
+                            </div>
                         </div>
                         
                         <div class="text-center">
@@ -156,17 +172,20 @@
                 mud_density: document.getElementById('mud_density').value,
                 density_unit: document.getElementById('density_unit').value,
                 bit_size: document.getElementById('bit_size').value,
-                nozzles: []
+                input_method: document.querySelector('input[name="inputMethod"]:checked').value,
+                nozzles: [],
+                tfa: document.getElementById('tfa_input').value
             };
 
-            // Save nozzle configurations
-            document.querySelectorAll('.nozzle-row').forEach(row => {
-                const size = row.querySelector('.nozzle-size').value;
-                const quantity = row.querySelector('.nozzle-quantity').value;
-                if (size && quantity) {
-                    formData.nozzles.push({ size, quantity });
-                }
-            });
+            if (formData.input_method === 'nozzle') {
+                document.querySelectorAll('.nozzle-row').forEach(row => {
+                    const size = row.querySelector('.nozzle-size').value;
+                    const quantity = row.querySelector('.nozzle-quantity').value;
+                    if (size && quantity) {
+                        formData.nozzles.push({ size, quantity });
+                    }
+                });
+            }
 
             localStorage.setItem('drillBitCalculatorData', JSON.stringify(formData));
         }
@@ -181,43 +200,23 @@
                 document.getElementById('mud_density').value = formData.mud_density || '';
                 document.getElementById('density_unit').value = formData.density_unit || 'sg';
                 document.getElementById('bit_size').value = formData.bit_size || '';
-
-                // Restore nozzle configurations
-                const container = document.getElementById('nozzleInputs');
-                container.innerHTML = ''; // Clear existing rows
                 
-                if (formData.nozzles && formData.nozzles.length > 0) {
-                    formData.nozzles.forEach(nozzle => {
-                        const row = document.createElement('div');
-                        row.className = 'row nozzle-row align-items-center';
-                        row.innerHTML = `
-                            <div class="col-5">
-                                <select class="form-select nozzle-size" required>
-                                    ${createNozzleOptions()}
-                                </select>
-                            </div>
-                            <div class="col-5">
-                                <select class="form-select nozzle-quantity" required>
-                                    ${createQuantityOptions()}
-                                </select>
-                            </div>
-                            <div class="col-2">
-                                <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.nozzle-row').remove()">
-                                    ×
-                                </button>
-                            </div>
-                        `;
-                        container.appendChild(row);
-                        
-                        // Set the saved values
-                        row.querySelector('.nozzle-size').value = nozzle.size;
-                        row.querySelector('.nozzle-quantity').value = nozzle.quantity;
-                    });
-                } else {
-                    addNozzleRow(); // Add default row if no saved data
+                // Restore input method
+                if (formData.input_method) {
+                    document.getElementById(formData.input_method + 'Method').checked = true;
+                    toggleInputMethod();
                 }
-            } else {
-                addNozzleRow(); // Add default row if no saved data
+                
+                if (formData.input_method === 'nozzle' && formData.nozzles) {
+                    // Restore nozzle configurations
+                    const container = document.getElementById('nozzleInputs');
+                    container.innerHTML = '';
+                    formData.nozzles.forEach(nozzle => {
+                        addNozzleRow(nozzle.size, nozzle.quantity);
+                    });
+                } else if (formData.input_method === 'tfa') {
+                    document.getElementById('tfa_input').value = formData.tfa || '';
+                }
             }
         }
 
@@ -324,17 +323,33 @@
         document.getElementById('calculatorForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const nozzles = [];
-            const nozzleRows = document.querySelectorAll('.nozzle-row');
+            const inputMethod = document.querySelector('input[name="inputMethod"]:checked').value;
+            let nozzles = [];
+            let tfa = null;
             
-            nozzleRows.forEach(row => {
-                const size = row.querySelector('.nozzle-size').value;
-                const quantity = row.querySelector('.nozzle-quantity').value;
-                if (size && quantity) {
-                    nozzles.push({size, quantity});
+            if (inputMethod === 'nozzle') {
+                // Collect nozzle data
+                document.querySelectorAll('.nozzle-row').forEach(row => {
+                    const size = row.querySelector('.nozzle-size').value;
+                    const quantity = row.querySelector('.nozzle-quantity').value;
+                    if (size && quantity) {
+                        nozzles.push({ size, quantity });
+                    }
+                });
+                
+                if (nozzles.length === 0) {
+                    showError('Please add at least one nozzle configuration');
+                    return;
                 }
-            });
-
+            } else {
+                // Get TFA input
+                tfa = document.getElementById('tfa_input').value;
+                if (!tfa || tfa <= 0) {
+                    showError('Please enter a valid Total Flow Area');
+                    return;
+                }
+            }
+            
             const flowRateInput = document.getElementById('flow_rate').value;
             const flowRate = parseFlowRate(flowRateInput);
             const densityValue = parseFloat(document.getElementById('mud_density').value);
@@ -345,7 +360,9 @@
                 mud_density: densityValue,
                 density_unit: densityUnit,
                 bit_size: parseFloat(document.getElementById('bit_size').value),
-                nozzles: nozzles
+                input_method: inputMethod,
+                nozzles: nozzles,
+                tfa: tfa
             };
             
             try {
@@ -416,6 +433,27 @@
         ['flow_rate', 'mud_density', 'density_unit', 'bit_size'].forEach(id => {
             document.getElementById(id).addEventListener('change', saveFormData);
         });
+
+        // Add these new functions for input method handling
+        function toggleInputMethod() {
+            const nozzleMethod = document.getElementById('nozzleMethod');
+            const nozzleSection = document.getElementById('nozzleConfigSection');
+            const tfaSection = document.getElementById('tfaInputSection');
+            
+            if (nozzleMethod.checked) {
+                nozzleSection.style.display = 'block';
+                tfaSection.style.display = 'none';
+                document.getElementById('tfa_input').value = ''; // Clear TFA input
+            } else {
+                nozzleSection.style.display = 'none';
+                tfaSection.style.display = 'block';
+                document.getElementById('nozzleInputs').innerHTML = ''; // Clear nozzle inputs
+            }
+        }
+
+        // Add event listeners for the radio buttons
+        document.getElementById('nozzleMethod').addEventListener('change', toggleInputMethod);
+        document.getElementById('tfaMethod').addEventListener('change', toggleInputMethod);
     </script>
 </body>
 </html> 
