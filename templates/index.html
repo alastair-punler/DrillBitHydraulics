@@ -181,7 +181,8 @@
                             <form id="annularVelocityForm">
                                 <div class="mb-3">
                                     <label for="av_flow_rate" class="form-label">Flow Rate (GPM)</label>
-                                    <input type="number" class="form-control" id="av_flow_rate" required placeholder="e.g., 900">
+                                    <input type="text" class="form-control" id="av_flow_rate" required placeholder="e.g., 900 or 800 - 1100">
+                                    <div class="form-text">For a range, use format: min - max.</div>
                                 </div>
 
                                 <hr>
@@ -200,7 +201,6 @@
                             </form>
 
                             <div id="av_results" class="result-box mt-4" style="display: none;">
-                                <h5 class="text-center mb-3">Calculated Annular Velocities</h5>
                                 <ul id="av_results_list" class="list-group">
                                     <!-- Results will be populated here by JS -->
                                 </ul>
@@ -631,6 +631,51 @@
                 return `<span class="${badgeClass} ${textColorClass}" style="${style}">${velocity} ft/min</span>`;
             };
 
+            const displayAvRangeTable = (result) => {
+                const avResultsList = document.getElementById('av_results_list');
+                avResultsList.innerHTML = ''; // Clear previous content
+                avResultsList.className = ''; // Remove list-group class
+
+                const tableContainer = document.createElement('div');
+                tableContainer.className = 'table-responsive';
+
+                let tableHtml = `
+                    <h5 class="text-center mb-3">Annular Velocities for Various Flow Rates</h5>
+                    <table class="table table-sm table-hover table-borderless text-center align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col" class="text-start ps-3">Flow Rate (GPM)</th>
+                `;
+
+                // Add headers for each geometry section
+                result.results_by_section.forEach(section => {
+                    tableHtml += `<th scope="col">${section.section}<br><small class="text-muted">OD:${section.od}" ID:${section.id}"</small></th>`;
+                });
+
+                tableHtml += `
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                // Add a row for each flow rate
+                result.flow_rates.forEach((flowRate, index) => {
+                    tableHtml += `<tr><th scope="row" class="text-start ps-3">${flowRate}</th>`;
+                    // Add a cell for each section's velocity at this flow rate
+                    result.results_by_section.forEach(section => {
+                        const velocityData = section.velocities[index];
+                        const badgeHtml = getVelocityBadge(velocityData.status, velocityData.velocity);
+                        tableHtml += `<td>${badgeHtml}<br><small class="text-muted">${velocityData.comment}</small></td>`;
+                    });
+                    tableHtml += `</tr>`;
+                });
+
+                tableHtml += `</tbody></table>`;
+
+                tableContainer.innerHTML = tableHtml;
+                avResultsList.appendChild(tableContainer);
+            };
+
             document.getElementById('calculateAvBtn').addEventListener('click', async function() {
                 const avErrorDiv = document.getElementById('av_error');
                 const avResultsDiv = document.getElementById('av_results');
@@ -641,9 +686,16 @@
                 avResultsDiv.style.display = 'none';
                 avResultsList.innerHTML = '';
 
-                const flowRate = document.getElementById('av_flow_rate').value;
-                if (!flowRate || parseFloat(flowRate) <= 0) {
+                const flowRateInput = document.getElementById('av_flow_rate').value;
+                const flowRate = parseFlowRate(flowRateInput); // Reuse parser from bit hydraulics
+
+                if (!flowRate.isRange && (isNaN(flowRate.value) || flowRate.value <= 0)) {
                     avErrorDiv.textContent = 'Please enter a valid, positive flow rate.';
+                    avErrorDiv.style.display = 'block';
+                    return;
+                }
+                if (flowRate.isRange && (isNaN(flowRate.min) || isNaN(flowRate.max) || flowRate.min <= 0 || flowRate.max <= 0)) {
+                    avErrorDiv.textContent = 'Please enter a valid, positive flow rate range.';
                     avErrorDiv.style.display = 'block';
                     return;
                 }
@@ -674,7 +726,7 @@
                 }
                 
                 const data = {
-                    flow_rate: parseFloat(flowRate),
+                    flow_rate: flowRate,
                     geometries: geometries
                 };
 
@@ -690,24 +742,31 @@
                         // Save form data on successful calculation
                         saveAvFormData();
 
-                        result.velocities.forEach(item => {
-                            const badgeHtml = getVelocityBadge(item.status, item.velocity);
-                            const li = document.createElement('li');
-                            li.className = 'list-group-item';
-                            li.innerHTML = `
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <strong>${item.section}</strong>
-                                        <small class="text-muted d-block">OD: ${item.od}" | ID: ${item.id}"</small>
+                        if (result.isRange) {
+                            displayAvRangeTable(result);
+                        } else {
+                            avResultsList.className = 'list-group'; // Restore list class
+                            avResultsList.innerHTML = `<h5 class="text-center mb-3">Calculated Annular Velocities</h5>`;
+                            result.velocities.forEach(item => {
+                                const badgeHtml = getVelocityBadge(item.status, item.velocity);
+                                const li = document.createElement('li');
+                                li.className = 'list-group-item';
+                                li.innerHTML = `
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>${item.section}</strong>
+                                            <small class="text-muted d-block">OD: ${item.od}" | ID: ${item.id}"</small>
+                                        </div>
+                                        <div class="text-end">
+                                            ${badgeHtml}
+                                            <small class="d-block text-muted">${item.comment}</small>
+                                        </div>
                                     </div>
-                                    <div class="text-end">
-                                        ${badgeHtml}
-                                        <small class="d-block text-muted">${item.comment}</small>
-                                    </div>
-                                </div>
-                            `;
-                            avResultsList.appendChild(li);
-                        });
+                                `;
+                                avResultsList.appendChild(li);
+                            });
+                        }
+
                         avResultsDiv.style.display = 'block';
                     } else {
                         avErrorDiv.textContent = result.error;

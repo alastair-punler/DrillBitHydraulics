@@ -122,6 +122,41 @@ def calculate_annular_velocity(flow_rate: float, outer_diameter: float, inner_di
     velocity = (ANNULAR_VELOCITY_CONSTANT * flow_rate) / annular_area
     return round(velocity, 2)
 
+def calculate_av_range_results(min_flow, max_flow, geometries):
+    """
+    Calculates annular velocities for a range of flow rates.
+    """
+    flow_rates = list(range(int(min_flow), int(max_flow) + 50, 50))
+    if not flow_rates: # Handle cases where min_flow is close to or greater than max_flow
+        flow_rates = [int(min_flow)]
+
+    results_by_section = []
+    for i, geo in enumerate(geometries):
+        od = float(geo['od'])
+        id = float(geo['id'])
+        section_name = geo.get('name', '').strip() or f"Section {i + 1}"
+        
+        section_velocities = []
+        for flow_rate in flow_rates:
+            velocity = calculate_annular_velocity(flow_rate, od, id)
+            feedback = get_velocity_feedback(velocity)
+            section_velocities.append({
+                'velocity': velocity,
+                **feedback
+            })
+        
+        results_by_section.append({
+            'section': section_name,
+            'od': od,
+            'id': id,
+            'velocities': section_velocities
+        })
+        
+    return {
+        'flow_rates': flow_rates,
+        'results_by_section': results_by_section
+    }
+
 def get_velocity_feedback(velocity: float) -> Dict[str, str]:
     """
     Provides a status and comment based on annular velocity for hole cleaning.
@@ -226,34 +261,46 @@ def calculate_av():
     """Endpoint for Annular Velocity calculations."""
     try:
         data = request.get_json()
-        flow_rate = float(data['flow_rate'])
+        flow_rate_data = data['flow_rate']
         geometries = data['geometries']
 
         if not geometries:
             return jsonify({'success': False, 'error': 'At least one geometry section is required.'}), 400
 
-        results = []
-        for i, geo in enumerate(geometries):
-            od = float(geo['od'])
-            id = float(geo['id'])
-            
-            # Allow custom naming for sections, with a default fallback
-            section_name = geo.get('name', '').strip()
-            if not section_name:
-                section_name = f"Section {i + 1}"
-
-            velocity = calculate_annular_velocity(flow_rate, od, id)
-            feedback = get_velocity_feedback(velocity)
-
-            results.append({
-                'section': section_name,
-                'od': od,
-                'id': id,
-                'velocity': velocity,
-                **feedback
+        if flow_rate_data.get('isRange'):
+            # Handle range calculation
+            range_results = calculate_av_range_results(
+                flow_rate_data['min'],
+                flow_rate_data['max'],
+                geometries
+            )
+            return jsonify({
+                'success': True,
+                'isRange': True,
+                **range_results
             })
-        
-        return jsonify({'success': True, 'velocities': results})
+        else:
+            # Handle single value calculation
+            flow_rate = float(flow_rate_data['value'])
+            results = []
+            for i, geo in enumerate(geometries):
+                od = float(geo['od'])
+                id = float(geo['id'])
+                
+                section_name = geo.get('name', '').strip() or f"Section {i + 1}"
+
+                velocity = calculate_annular_velocity(flow_rate, od, id)
+                feedback = get_velocity_feedback(velocity)
+
+                results.append({
+                    'section': section_name,
+                    'od': od,
+                    'id': id,
+                    'velocity': velocity,
+                    **feedback
+                })
+            
+            return jsonify({'success': True, 'isRange': False, 'velocities': results})
 
     except (ValueError, KeyError) as e:
         return jsonify({'success': False, 'error': f"Invalid input: {e}"}), 400
