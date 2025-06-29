@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Drill Bit Hydraulics Calculator</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
@@ -47,111 +48,166 @@
             height: 300px;
             margin-top: 2rem;
         }
+        .tab-content {
+            padding-top: 1.5rem;
+        }
+        .geometry-row {
+            margin-bottom: 1rem;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-md-8">
+            <div class="col-lg-8 col-md-10">
                 <div class="calculator-card">
                     <div class="title-container">
                         <img src="/static/images/drill-bit.png" alt="Drill bit" class="drill-bit-icon">
-                        <h1 class="text-center mb-0">Drill Bit Hydraulics Calculator</h1>
+                        <h1 class="text-center mb-0">Drilling Hydraulics</h1>
                         <img src="/static/images/drill-bit.png" alt="Drill bit" class="drill-bit-icon flip">
                     </div>
-                    
-                    <form id="calculatorForm">
-                        <div class="mb-3">
-                            <label for="flow_rate" class="form-label">Flow Rate (GPM)</label>
-                            <input type="text" class="form-control" id="flow_rate" required 
-                                   placeholder="Single value or range (e.g., 800 or 800 - 1100)">
-                            <div class="form-text">For a range, use format: min - max (e.g., 800 - 1100)</div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="mud_density" class="form-label">Mud Density</label>
-                            <div class="input-group">
-                                <input type="number" class="form-control" id="mud_density" required step="any">
-                                <select class="form-select" id="density_unit" style="max-width: 100px;">
-                                    <option value="sg">SG</option>
-                                    <option value="ppg">PPG</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="bit_size" class="form-label">Bit Size (inches)</label>
-                            <input type="number" class="form-control" id="bit_size" required step="any">
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Input Method</label>
-                            <div class="btn-group w-100 mb-3" role="group">
-                                <input type="radio" class="btn-check" name="inputMethod" id="nozzleMethod" value="nozzle" checked>
-                                <label class="btn btn-outline-primary" for="nozzleMethod">Nozzle Configuration</label>
-                                
-                                <input type="radio" class="btn-check" name="inputMethod" id="tfaMethod" value="tfa">
-                                <label class="btn btn-outline-primary" for="tfaMethod">Direct TFA Input</label>
-                            </div>
-                            
-                            <div id="nozzleConfigSection">
-                                <label class="form-label">Nozzle Configuration</label>
-                                <div id="nozzleInputs">
-                                    <!-- Nozzle inputs will be added here -->
+
+                    <!-- Navigation Tabs -->
+                    <ul class="nav nav-tabs" id="calculatorTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="bit-hydraulics-tab" data-bs-toggle="tab" data-bs-target="#bit-hydraulics-pane" type="button" role="tab" aria-controls="bit-hydraulics-pane" aria-selected="true">Bit Hydraulics</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="annular-velocity-tab" data-bs-toggle="tab" data-bs-target="#annular-velocity-pane" type="button" role="tab" aria-controls="annular-velocity-pane" aria-selected="false">Annular Velocity</button>
+                        </li>
+                    </ul>
+
+                    <!-- Tab Content -->
+                    <div class="tab-content" id="calculatorTabContent">
+                        <!-- Bit Hydraulics Calculator Pane -->
+                        <div class="tab-pane fade show active" id="bit-hydraulics-pane" role="tabpanel" aria-labelledby="bit-hydraulics-tab" tabindex="0">
+                            <form id="calculatorForm">
+                                <div class="mb-3">
+                                    <label for="flow_rate" class="form-label">Flow Rate (GPM)</label>
+                                    <input type="text" class="form-control" id="flow_rate" required 
+                                           placeholder="Single value or range (e.g., 800 or 800 - 1100)">
+                                    <div class="form-text">For a range, use format: min - max (e.g., 800 - 1100)</div>
                                 </div>
-                                <button type="button" class="btn btn-secondary mt-2" id="addNozzle" onclick="addNozzleRow()">
-                                    Add Nozzle
-                                </button>
+                                
+                                <div class="mb-3">
+                                    <label for="mud_density" class="form-label">Mud Density</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="mud_density" required step="any">
+                                        <select class="form-select" id="density_unit" style="max-width: 100px;">
+                                            <option value="sg">SG</option>
+                                            <option value="ppg">PPG</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="bit_size" class="form-label">Bit Size (inches)</label>
+                                    <input type="number" class="form-control" id="bit_size" required step="any">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Input Method</label>
+                                    <div class="btn-group w-100 mb-3" role="group">
+                                        <input type="radio" class="btn-check" name="inputMethod" id="nozzleMethod" value="nozzle" checked>
+                                        <label class="btn btn-outline-primary" for="nozzleMethod">Nozzle Configuration</label>
+                                        
+                                        <input type="radio" class="btn-check" name="inputMethod" id="tfaMethod" value="tfa">
+                                        <label class="btn btn-outline-primary" for="tfaMethod">Direct TFA Input</label>
+                                    </div>
+                                    
+                                    <div id="nozzleConfigSection">
+                                        <label class="form-label">Nozzle Configuration</label>
+                                        <div id="nozzleInputs">
+                                            <!-- Nozzle inputs will be added here -->
+                                        </div>
+                                        <button type="button" class="btn btn-secondary mt-2" id="addNozzle" onclick="addNozzleRow()">
+                                            Add Nozzle
+                                        </button>
+                                    </div>
+                                    
+                                    <div id="tfaInputSection" style="display: none;">
+                                        <label for="tfa_input" class="form-label">Total Flow Area (in²)</label>
+                                        <input type="number" class="form-control" id="tfa_input" step="0.0001" min="0" placeholder="Enter TFA in square inches">
+                                    </div>
+                                </div>
+                                
+                                <div class="text-center">
+                                    <button type="submit" class="btn btn-primary">Calculate</button>
+                                </div>
+                            </form>
+                            
+                            <div id="result" class="result-box mt-4" style="display: none;">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <h5 class="text-center">Pressure Loss</h5>
+                                        <p class="text-center mb-0">
+                                            <span id="pressure_loss_value" class="h3"></span>
+                                            <span class="h4"> PSI</span>
+                                        </p>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <h5 class="text-center">HSI</h5>
+                                        <p class="text-center mb-0">
+                                            <span id="hsi_value" class="h3"></span>
+                                            <span class="h4"> HSI</span>
+                                        </p>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <h5 class="text-center">Total Flow Area</h5>
+                                        <p class="text-center mb-0">
+                                            <span id="total_flow_area_value" class="h3"></span>
+                                            <span class="h4"> in²</span>
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                <!-- Charts section -->
+                                <div id="charts" style="display: none;">
+                                    <div class="chart-container">
+                                        <canvas id="pressureChart"></canvas>
+                                    </div>
+                                    <div class="chart-container">
+                                        <canvas id="hsiChart"></canvas>
+                                    </div>
+                                </div>
                             </div>
                             
-                            <div id="tfaInputSection" style="display: none;">
-                                <label for="tfa_input" class="form-label">Total Flow Area (in²)</label>
-                                <input type="number" class="form-control" id="tfa_input" step="0.0001" min="0" placeholder="Enter TFA in square inches">
+                            <div id="error" class="alert alert-danger mt-4" style="display: none;">
                             </div>
                         </div>
-                        
-                        <div class="text-center">
-                            <button type="submit" class="btn btn-primary">Calculate</button>
+
+                        <!-- Annular Velocity Calculator Pane -->
+                        <div class="tab-pane fade" id="annular-velocity-pane" role="tabpanel" aria-labelledby="annular-velocity-tab" tabindex="0">
+                            <form id="annularVelocityForm">
+                                <div class="mb-3">
+                                    <label for="av_flow_rate" class="form-label">Flow Rate (GPM)</label>
+                                    <input type="number" class="form-control" id="av_flow_rate" required placeholder="e.g., 900">
+                                </div>
+
+                                <hr>
+
+                                <label class="form-label">Annular Geometries</label>
+                                <div id="geometryInputs">
+                                    <!-- Geometry rows will be added here by JS -->
+                                </div>
+                                <button type="button" class="btn btn-secondary mt-2" id="addGeometry">
+                                    Add Geometry Section
+                                </button>
+
+                                <div class="text-center mt-4">
+                                    <button type="button" id="calculateAvBtn" class="btn btn-primary">Calculate Annular Velocities</button>
+                                </div>
+                            </form>
+
+                            <div id="av_results" class="result-box mt-4" style="display: none;">
+                                <h5 class="text-center mb-3">Calculated Annular Velocities</h5>
+                                <ul id="av_results_list" class="list-group">
+                                    <!-- Results will be populated here by JS -->
+                                </ul>
+                            </div>
+
+                            <div id="av_error" class="alert alert-danger mt-4" style="display: none;"></div>
                         </div>
-                    </form>
-                    
-                    <div id="result" class="result-box mt-4" style="display: none;">
-                        <div class="row">
-                            <div class="col-md-4">
-                                <h5 class="text-center">Pressure Loss</h5>
-                                <p class="text-center mb-0">
-                                    <span id="pressure_loss_value" class="h3"></span>
-                                    <span class="h4"> PSI</span>
-                                </p>
-                            </div>
-                            <div class="col-md-4">
-                                <h5 class="text-center">HSI</h5>
-                                <p class="text-center mb-0">
-                                    <span id="hsi_value" class="h3"></span>
-                                    <span class="h4"> HSI</span>
-                                </p>
-                            </div>
-                            <div class="col-md-4">
-                                <h5 class="text-center">Total Flow Area</h5>
-                                <p class="text-center mb-0">
-                                    <span id="total_flow_area_value" class="h3"></span>
-                                    <span class="h4"> in²</span>
-                                </p>
-                            </div>
-                        </div>
-                        
-                        <!-- Charts section -->
-                        <div id="charts" style="display: none;">
-                            <div class="chart-container">
-                                <canvas id="pressureChart"></canvas>
-                            </div>
-                            <div class="chart-container">
-                                <canvas id="hsiChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div id="error" class="alert alert-danger mt-4" style="display: none;">
                     </div>
                 </div>
             </div>
@@ -161,7 +217,7 @@
         </div>
     </div>
 
-    <script>
+    <script> // Bit Hydraulics Script
         let pressureChart = null;
         let hsiChart = null;
 
@@ -317,6 +373,13 @@
             });
         }
 
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+        }
+
         // Load saved data when page loads
         document.addEventListener('DOMContentLoaded', restoreFormData);
 
@@ -455,5 +518,207 @@
         document.getElementById('nozzleMethod').addEventListener('change', toggleInputMethod);
         document.getElementById('tfaMethod').addEventListener('change', toggleInputMethod);
     </script>
+    <script> // Annular Velocity Script
+        document.addEventListener('DOMContentLoaded', () => {
+            const geometryInputsContainer = document.getElementById('geometryInputs');
+            const addGeometryBtn = document.getElementById('addGeometry');
+
+            const saveAvFormData = () => {
+                const geometries = [];
+                document.querySelectorAll('#geometryInputs .geometry-row').forEach(row => {
+                    const name = row.querySelector('.av-name').value;
+                    const od = row.querySelector('.av-od').value;
+                    const id = row.querySelector('.av-id').value;
+                    if (name || od || id) { // Only save if there's some data
+                        geometries.push({ name, od, id });
+                    }
+                });
+
+                const formData = {
+                    flow_rate: document.getElementById('av_flow_rate').value,
+                    geometries: geometries
+                };
+
+                localStorage.setItem('annularVelocityCalculatorData', JSON.stringify(formData));
+            };
+
+            const restoreAvFormData = () => {
+                const savedData = localStorage.getItem('annularVelocityCalculatorData');
+                if (savedData) {
+                    const formData = JSON.parse(savedData);
+                    document.getElementById('av_flow_rate').value = formData.flow_rate || '';
+
+                    const container = document.getElementById('geometryInputs');
+                    container.innerHTML = ''; // Clear any default rows
+
+                    if (formData.geometries && formData.geometries.length > 0) {
+                        formData.geometries.forEach(geo => {
+                            addGeometryRow(geo.name, geo.od, geo.id);
+                        });
+                    } else {
+                        addGeometryRow(); // Add one empty row if none were saved
+                    }
+                } else {
+                    addGeometryRow(); // Add one empty row by default on first visit
+                }
+            };
+
+            const addGeometryRow = (name = '', od = '', id = '') => {
+                const geometryCount = geometryInputsContainer.children.length;
+                if (geometryCount >= 10) {
+                    alert('Maximum of 10 geometry sections allowed.');
+                    return;
+                }
+                const row = document.createElement('div');
+                row.className = 'row geometry-row align-items-center';
+                row.innerHTML = `
+                    <div class="col-md-4">
+                        <input type="text" class="form-control av-name" placeholder="Section Name (Optional)">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="number" class="form-control av-od" placeholder="OD (in)" required step="any" min="0">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="number" class="form-control av-id" placeholder="ID (in)" required step="any" min="0">
+                    </div>
+                    <div class="col-md-2 text-end">
+                        <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.geometry-row').remove()" aria-label="Remove Section">×</button>
+                    </div>
+                `;
+                // Populate values from saved data
+                row.querySelector('.av-name').value = name;
+                row.querySelector('.av-od').value = od;
+                row.querySelector('.av-id').value = id;
+
+                // Add event listeners to new inputs for auto-saving
+                row.querySelectorAll('input').forEach(input => {
+                    input.addEventListener('change', saveAvFormData);
+                });
+
+                geometryInputsContainer.appendChild(row);
+            };
+
+            addGeometryBtn.addEventListener('click', () => addGeometryRow());
+            document.getElementById('av_flow_rate').addEventListener('change', saveAvFormData);
+            restoreAvFormData();
+
+            const getVelocityBadge = (status, velocity) => {
+                let badgeClass = 'badge rounded-pill';
+                let style = '';
+                let textColorClass = 'text-white'; // Default to white text for colored backgrounds
+
+                switch (status) {
+                    case 'optimal':
+                        badgeClass += ' bg-success';
+                        break;
+                    case 'poor':
+                        badgeClass += ' bg-danger';
+                        break;
+                    case 'minimum':
+                        // Calculate gradient factor (0 to 1) for the range 150-200
+                        const factor = Math.max(0, Math.min(1, (velocity - 150) / 50));
+                        // Interpolate alpha from 0.3 (faint) to 1.0 (solid)
+                        const alpha = 0.3 + (factor * 0.7);
+                        // Bootstrap's success color is rgb(25, 135, 84)
+                        style = `background-color: rgba(25, 135, 84, ${alpha.toFixed(2)});`;
+                        if (alpha < 0.5) {
+                            textColorClass = 'text-dark'; // Use dark text on very light backgrounds
+                        }
+                        break;
+                    default:
+                        badgeClass += ' bg-secondary';
+                }
+                return `<span class="${badgeClass} ${textColorClass}" style="${style}">${velocity} ft/min</span>`;
+            };
+
+            document.getElementById('calculateAvBtn').addEventListener('click', async function() {
+                const avErrorDiv = document.getElementById('av_error');
+                const avResultsDiv = document.getElementById('av_results');
+                const avResultsList = document.getElementById('av_results_list');
+
+                // Clear previous state
+                avErrorDiv.style.display = 'none';
+                avResultsDiv.style.display = 'none';
+                avResultsList.innerHTML = '';
+
+                const flowRate = document.getElementById('av_flow_rate').value;
+                if (!flowRate || parseFloat(flowRate) <= 0) {
+                    avErrorDiv.textContent = 'Please enter a valid, positive flow rate.';
+                    avErrorDiv.style.display = 'block';
+                    return;
+                }
+
+                const geometryRows = document.querySelectorAll('#geometryInputs .geometry-row');
+                const geometries = [];
+                let validationError = null;
+
+                geometryRows.forEach(row => {
+                    const nameInput = row.querySelector('.av-name');
+                    const odInput = row.querySelector('.av-od');
+                    const idInput = row.querySelector('.av-id');
+                    const od = parseFloat(odInput.value);
+                    const id = parseFloat(idInput.value);
+
+                    if (isNaN(od) || isNaN(id) || od <= 0 || id <= 0) {
+                        validationError = 'All diameter fields must be filled with positive numbers.';
+                    } else if (id <= od) {
+                        validationError = 'Inner Diameter (ID) must be greater than Outer Diameter (OD) for all sections.';
+                    }
+                    geometries.push({ name: nameInput.value, od, id });
+                });
+
+                if (validationError) {
+                    avErrorDiv.textContent = validationError;
+                    avErrorDiv.style.display = 'block';
+                    return;
+                }
+                
+                const data = {
+                    flow_rate: parseFloat(flowRate),
+                    geometries: geometries
+                };
+
+                try {
+                    const response = await fetch('/calculate_av', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        // Save form data on successful calculation
+                        saveAvFormData();
+
+                        result.velocities.forEach(item => {
+                            const badgeHtml = getVelocityBadge(item.status, item.velocity);
+                            const li = document.createElement('li');
+                            li.className = 'list-group-item';
+                            li.innerHTML = `
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>${item.section}</strong>
+                                        <small class="text-muted d-block">OD: ${item.od}" | ID: ${item.id}"</small>
+                                    </div>
+                                    <div class="text-end">
+                                        ${badgeHtml}
+                                        <small class="d-block text-muted">${item.comment}</small>
+                                    </div>
+                                </div>
+                            `;
+                            avResultsList.appendChild(li);
+                        });
+                        avResultsDiv.style.display = 'block';
+                    } else {
+                        avErrorDiv.textContent = result.error;
+                        avErrorDiv.style.display = 'block';
+                    }
+                } catch (error) {
+                    avErrorDiv.textContent = 'An unexpected error occurred. Please try again.';
+                    avErrorDiv.style.display = 'block';
+                }
+            });
+        });
+    </script>
 </body>
-</html> 
+</html>

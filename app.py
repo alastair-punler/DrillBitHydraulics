@@ -1,9 +1,14 @@
 from flask import Flask, render_template, request, jsonify
 import math
 import numpy as np
+from typing import List, Dict, Tuple
 import os
 
 app = Flask(__name__, static_url_path='/static', static_folder='static')
+
+# --- Constants ---
+SG_TO_PPG_CONVERSION = 8.33
+ANNULAR_VELOCITY_CONSTANT = 24.51 # Constant for AV in ft/min from GPM and inches
 
 def convert_to_ppg(value, unit):
     """
@@ -17,7 +22,7 @@ def convert_to_ppg(value, unit):
     float: Density in PPG
     """
     if unit.lower() == 'sg':
-        return value * 8.33  # Convert SG to PPG
+        return value * SG_TO_PPG_CONVERSION  # Convert SG to PPG
     return value  # Already in PPG
 
 def calculate_total_flow_area(nozzles):
@@ -100,6 +105,40 @@ def calculate_range_results(min_flow, max_flow, mud_density, density_unit, nozzl
         'avg_hsi': round(sum(hsi_values) / len(hsi_values), 2)
     }
 
+def calculate_annular_velocity(flow_rate: float, outer_diameter: float, inner_diameter: float) -> float:
+    """
+    Calculates annular velocity in ft/min.
+
+    Formula: AV (ft/min) = (24.51 * Flow Rate (GPM)) / (ID^2 - OD^2)
+    """
+    if inner_diameter <= outer_diameter:
+        raise ValueError("Inner Diameter (ID) must be greater than Outer Diameter (OD).")
+    
+    # Annular area in square inches
+    annular_area = inner_diameter**2 - outer_diameter**2
+    if annular_area == 0:
+        raise ValueError("Inner and Outer diameters cannot be equal.")
+        
+    velocity = (ANNULAR_VELOCITY_CONSTANT * flow_rate) / annular_area
+    return round(velocity, 2)
+
+def get_velocity_feedback(velocity: float) -> Dict[str, str]:
+    """
+    Provides a status and comment based on annular velocity for hole cleaning.
+    
+    Parameters:
+    velocity (float): Annular velocity in ft/min.
+    
+    Returns:
+    dict: A dictionary with 'status' and 'comment'.
+    """
+    if velocity >= 200:
+        return {'status': 'optimal', 'comment': 'Optimal hole cleaning'}
+    elif velocity >= 150:
+        return {'status': 'minimum', 'comment': 'Minimum hole cleaning achieved'}
+    else:
+        return {'status': 'poor', 'comment': 'Poor hole cleaning'}
+
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -173,11 +212,54 @@ def calculate():
                 **results
             })
         
+    except (ValueError, KeyError) as e:
+        return jsonify({'success': False, 'error': f"Invalid input data: {e}"}), 400
     except Exception as e:
+        app.logger.error(f"An unexpected error occurred in /calculate: {e}")
         return jsonify({
             'success': False,
-            'error': str(e)
-        }), 400
+            'error': "An internal server error occurred."
+        }), 500
+
+@app.route('/calculate_av', methods=['POST'])
+def calculate_av():
+    """Endpoint for Annular Velocity calculations."""
+    try:
+        data = request.get_json()
+        flow_rate = float(data['flow_rate'])
+        geometries = data['geometries']
+
+        if not geometries:
+            return jsonify({'success': False, 'error': 'At least one geometry section is required.'}), 400
+
+        results = []
+        for i, geo in enumerate(geometries):
+            od = float(geo['od'])
+            id = float(geo['id'])
+            
+            # Allow custom naming for sections, with a default fallback
+            section_name = geo.get('name', '').strip()
+            if not section_name:
+                section_name = f"Section {i + 1}"
+
+            velocity = calculate_annular_velocity(flow_rate, od, id)
+            feedback = get_velocity_feedback(velocity)
+
+            results.append({
+                'section': section_name,
+                'od': od,
+                'id': id,
+                'velocity': velocity,
+                **feedback
+            })
+        
+        return jsonify({'success': True, 'velocities': results})
+
+    except (ValueError, KeyError) as e:
+        return jsonify({'success': False, 'error': f"Invalid input: {e}"}), 400
+    except Exception as e:
+        app.logger.error(f"Annular velocity calculation error: {e}")
+        return jsonify({'success': False, 'error': 'An internal server error occurred.'}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
