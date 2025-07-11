@@ -138,21 +138,28 @@
                             
                             <div id="result" class="result-box mt-4" style="display: none;">
                                 <div class="row">
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
                                         <h5 class="text-center">Pressure Loss</h5>
                                         <p class="text-center mb-0">
                                             <span id="pressure_loss_value" class="h3"></span>
                                             <span class="h4"> PSI</span>
                                         </p>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
                                         <h5 class="text-center">HSI</h5>
                                         <p class="text-center mb-0">
                                             <span id="hsi_value" class="h3"></span>
                                             <span class="h4"> HSI</span>
                                         </p>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
+                                        <h5 class="text-center">Impact Force</h5>
+                                        <p class="text-center mb-0">
+                                            <span id="jet_impact_force_value" class="h3"></span>
+                                            <span class="h4"> lbs</span>
+                                        </p>
+                                    </div>
+                                    <div class="col-md-3">
                                         <h5 class="text-center">Total Flow Area</h5>
                                         <p class="text-center mb-0">
                                             <span id="total_flow_area_value" class="h3"></span>
@@ -168,6 +175,9 @@
                                     </div>
                                     <div class="chart-container">
                                         <canvas id="hsiChart"></canvas>
+                                    </div>
+                                    <div class="chart-container">
+                                        <canvas id="jetImpactForceChart"></canvas>
                                     </div>
                                 </div>
                             </div>
@@ -220,6 +230,7 @@
     <script> // Bit Hydraulics Script
         let pressureChart = null;
         let hsiChart = null;
+         let jetImpactForceChart = null;
 
         // Functions to save and restore form data
         function saveFormData() {
@@ -340,7 +351,12 @@
         }
 
         function createChart(ctx, label, xLabel, yLabel) {
-            const isPressureloss = label.toLowerCase().includes('pressure');
+            let borderColor = '#0d6efd'; // Default blue
+            if (label.toLowerCase().includes('pressure')) {
+                borderColor = '#dc3545'; // Red for pressure
+            } else if (label.toLowerCase().includes('impact force')) {
+                borderColor = '#198754'; // Green for impact force
+            }
             return new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -348,7 +364,7 @@
                     datasets: [{
                         label: label,
                         data: [],
-                        borderColor: isPressureloss ? '#dc3545' : '#0d6efd',
+                        borderColor: borderColor,
                         tension: 0.1
                     }]
                 },
@@ -464,15 +480,25 @@
                         hsiChart.data.labels = result.flow_rates;
                         hsiChart.data.datasets[0].data = result.hsi_values;
                         hsiChart.update();
+
+                        // Create or update Jet Impact Force chart
+                        const jetImpactForceCtx = document.getElementById('jetImpactForceChart');
+                        if (jetImpactForceChart) jetImpactForceChart.destroy();
+                        jetImpactForceChart = createChart(jetImpactForceCtx, 'Jet Impact Force vs Flow Rate', 'Flow Rate (GPM)', 'Impact Force (lbs)');
+                        jetImpactForceChart.data.labels = result.flow_rates;
+                        jetImpactForceChart.data.datasets[0].data = result.jet_impact_force_values;
+                        jetImpactForceChart.update();
                         
                         // Show average values
                         document.getElementById('pressure_loss_value').textContent = result.avg_pressure_loss;
                         document.getElementById('hsi_value').textContent = result.avg_hsi;
+                        document.getElementById('jet_impact_force_value').textContent = result.avg_jet_impact_force;
                     } else {
                         // Show single value results
                         document.getElementById('charts').style.display = 'none';
                         document.getElementById('pressure_loss_value').textContent = result.pressure_loss;
                         document.getElementById('hsi_value').textContent = result.hsi;
+                        document.getElementById('jet_impact_force_value').textContent = result.jet_impact_force;
                     }
                     
                     document.getElementById('total_flow_area_value').textContent = result.total_flow_area;
