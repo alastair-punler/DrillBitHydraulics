@@ -303,7 +303,7 @@
             return options;
         }
 
-        function addNozzleRow() {
+        function addNozzleRow(size = '', quantity = '') { // Accept optional size and quantity
             const container = document.getElementById('nozzleInputs');
             const nozzleCount = container.children.length;
             
@@ -326,12 +326,20 @@
                     </select>
                 </div>
                 <div class="col-2">
-                    <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.nozzle-row').remove()">
+                    <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.nozzle-row').remove(); saveFormData();">
                         ×
                     </button>
                 </div>
             `;
             
+            // If size and quantity are provided (during restore), set them
+            if (size) {
+                row.querySelector('.nozzle-size').value = size;
+            }
+            if (quantity) {
+                row.querySelector('.nozzle-quantity').value = quantity;
+            }
+
             container.appendChild(row);
         }
 
