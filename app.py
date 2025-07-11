@@ -71,11 +71,40 @@ def calculate_bit_hydraulics(flow_rate, mud_density, density_unit, nozzles, bit_
     # Calculate HSI using your formula
     hsi = (flow_rate * pressure_loss)*1.27 / (1714 * bit_size**2)
     
+    # Calculate Jet Impact Force
+    jet_impact_force = calculate_jet_impact_force(flow_rate, mud_density_ppg, total_flow_area)
+
     return {
         'pressure_loss': round(pressure_loss, 2),
         'hsi': round(hsi, 2),
-        'total_flow_area': total_flow_area
+        'total_flow_area': total_flow_area,
+        'jet_impact_force': round(jet_impact_force, 2)
     }
+
+def calculate_jet_impact_force(flow_rate, mud_density_ppg, total_flow_area):
+    """
+    Calculate Jet Impact Force (JIF) in pounds.
+
+    Parameters:
+    flow_rate (float): Flow rate in gallons per minute (GPM)
+    mud_density_ppg (float): Mud density in pounds per gallon (PPG)
+    total_flow_area (float): Total flow area in square inches (in²)
+
+    Returns:
+    float: Jet Impact Force in pounds (lbs)
+    """
+    if total_flow_area == 0:
+        return 0 # Avoid division by zero
+
+    # Calculate Nozzle Velocity (Vn) in ft/s
+    # Vn = 0.32086 * GPM / TFA (in²)
+    nozzle_velocity = 0.32086 * flow_rate / total_flow_area
+
+    # Calculate Jet Impact Force (JIF) in lbs
+    # JIF = 0.000526 * Mud Density (ppg) * Flow Rate (gpm) * Nozzle Velocity (ft/s)
+    jet_impact_force = 0.000526 * mud_density_ppg * flow_rate * nozzle_velocity
+
+    return jet_impact_force
 
 def calculate_range_results(min_flow, max_flow, mud_density, density_unit, nozzles, bit_size, total_flow_area=None):
     """
@@ -84,6 +113,7 @@ def calculate_range_results(min_flow, max_flow, mud_density, density_unit, nozzl
     flow_rates = list(range(int(min_flow), int(max_flow) + 50, 50))
     pressure_losses = []
     hsi_values = []
+    jet_impact_force_values = []
     
     for flow_rate in flow_rates:
         result = calculate_bit_hydraulics(
@@ -96,13 +126,16 @@ def calculate_range_results(min_flow, max_flow, mud_density, density_unit, nozzl
         )
         pressure_losses.append(result['pressure_loss'])
         hsi_values.append(result['hsi'])
+        jet_impact_force_values.append(result['jet_impact_force'])
     
     return {
         'flow_rates': flow_rates,
         'pressure_losses': pressure_losses,
         'hsi_values': hsi_values,
+        'jet_impact_force_values': jet_impact_force_values,
         'avg_pressure_loss': round(sum(pressure_losses) / len(pressure_losses), 2),
-        'avg_hsi': round(sum(hsi_values) / len(hsi_values), 2)
+        'avg_hsi': round(sum(hsi_values) / len(hsi_values), 2),
+        'avg_jet_impact_force': round(sum(jet_impact_force_values) / len(jet_impact_force_values), 2)
     }
 
 def calculate_annular_velocity(flow_rate: float, outer_diameter: float, inner_diameter: float) -> float:
