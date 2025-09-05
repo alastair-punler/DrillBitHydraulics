@@ -66,7 +66,7 @@ def calculate_bit_hydraulics(flow_rate, mud_density, density_unit, nozzles, bit_
         total_flow_area = calculate_total_flow_area(nozzles)
     
     # Calculate pressure loss using your formula
-    pressure_loss = (mud_density_ppg * flow_rate**2) / (12032 * total_flow_area**2)
+    pressure_loss = (mud_density_ppg * flow_rate**2) / (10858 * total_flow_area**2)
     
     # Calculate HSI using your formula
     hsi = (flow_rate * pressure_loss)*1.27 / (1714 * bit_size**2)
