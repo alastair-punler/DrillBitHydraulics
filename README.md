@@ -23,7 +23,7 @@ The calculator uses industry-standard formulas for drilling hydraulics calculati
 The pressure drop through bit nozzles is calculated using:
 
 ```
-Pressure Loss = (MW × Q²) / (12031 × TFA²)
+Pressure Loss = (MW × Q²) / (10858 × TFA²)
 ```
 
 Where:
