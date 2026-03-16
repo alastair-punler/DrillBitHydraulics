@@ -60,6 +60,12 @@
         .history-table .border-end {
             border-right: 1px solid #dee2e6 !important;
         }
+        .history-table tbody tr:nth-of-type(odd) {
+            background-color: #f0f2f5;
+        }
+        .history-table tbody tr:nth-of-type(even) {
+            background-color: #ffffff;
+        }
     </style>
 </head>
 <body>
@@ -195,7 +201,7 @@
                             <div id="history_container" class="mt-4" style="display: none;">
                                 <h5 class="text-center text-muted">Previous Calculations</h5>
                                 <div class="table-responsive">
-                                    <table class="table table-sm table-striped text-center align-middle history-table" id="history_table">
+                                    <table class="table table-sm text-center align-middle history-table" id="history_table">
                                         <thead class="table-light text-muted">
                                             <tr>
                                                 <th colspan="4" class="border-end bg-light">Inputs</th>
