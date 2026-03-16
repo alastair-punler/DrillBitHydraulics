@@ -54,6 +54,12 @@
         .geometry-row {
             margin-bottom: 1rem;
         }
+        .history-table td {
+            color: #6c757d; /* text-muted color */
+        }
+        .history-table .border-end {
+            border-right: 1px solid #dee2e6 !important;
+        }
     </style>
 </head>
 <body>
@@ -184,6 +190,34 @@
                             
                             <div id="error" class="alert alert-danger mt-4" style="display: none;">
                             </div>
+
+                            <!-- Calculation History -->
+                            <div id="history_container" class="mt-4" style="display: none;">
+                                <h5 class="text-center text-muted">Previous Calculations</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-sm text-center align-middle history-table" id="history_table">
+                                        <thead class="table-light text-muted">
+                                            <tr>
+                                                <th colspan="4" class="border-end bg-light">Inputs</th>
+                                                <th colspan="3" class="bg-light">Outputs</th>
+                                            </tr>
+                                            <tr>
+                                                <th scope="col" class="text-muted" style="font-weight: normal; font-size: 0.85rem;">Flow (GPM)</th>
+                                                <th scope="col" class="text-muted" style="font-weight: normal; font-size: 0.85rem;">Mud Density</th>
+                                                <th scope="col" class="text-muted" style="font-weight: normal; font-size: 0.85rem;">Bit (in)</th>
+                                                <th scope="col" class="border-end text-muted" style="font-weight: normal; font-size: 0.85rem;">TFA (in²)</th>
+
+                                                <th scope="col" class="text-muted" style="font-weight: normal; font-size: 0.85rem;">Pressure Loss (PSI)</th>
+                                                <th scope="col" class="text-muted" style="font-weight: normal; font-size: 0.85rem;">HSI</th>
+                                                <th scope="col" class="text-muted" style="font-weight: normal; font-size: 0.85rem;">Impact Force (lbs)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="history_body" class="text-muted" style="font-size: 0.85rem;">
+                                            <!-- History rows will be populated here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Annular Velocity Calculator Pane -->
@@ -233,6 +267,9 @@
         let pressureChart = null;
         let hsiChart = null;
          let jetImpactForceChart = null;
+
+        // Array to store calculation history
+        let calculationHistory = [];
 
         // Functions to save and restore form data
         function saveFormData() {
@@ -406,6 +443,37 @@
             document.getElementById('result').style.display = 'none';
         }
 
+        function updateHistoryTable() {
+            const container = document.getElementById('history_container');
+            const tbody = document.getElementById('history_body');
+
+            if (calculationHistory.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+
+            container.style.display = 'block';
+            tbody.innerHTML = '';
+
+            // Loop through history backwards to show newest first
+            for (let i = calculationHistory.length - 1; i >= 0; i--) {
+                const calc = calculationHistory[i];
+                const tr = document.createElement('tr');
+
+                tr.innerHTML = `
+                    <td>${calc.flowRate}</td>
+                    <td>${calc.mudDensity} ${calc.densityUnit}</td>
+                    <td>${calc.bitSize}</td>
+                    <td class="border-end">${calc.tfa}</td>
+                    <td>${calc.pressureLoss}</td>
+                    <td>${calc.hsi}</td>
+                    <td>${calc.impactForce}</td>
+                `;
+
+                tbody.appendChild(tr);
+            }
+        }
+
         // Load saved data when page loads
         document.addEventListener('DOMContentLoaded', restoreFormData);
 
@@ -503,16 +571,72 @@
                         document.getElementById('pressure_loss_value').textContent = result.avg_pressure_loss;
                         document.getElementById('hsi_value').textContent = result.avg_hsi;
                         document.getElementById('jet_impact_force_value').textContent = result.avg_jet_impact_force;
+
+                        // Add to history (min, avg, max)
+                        if (result.flow_rates && result.flow_rates.length > 0) {
+                            const minIndex = 0;
+                            const maxIndex = result.flow_rates.length - 1;
+
+                            // Min
+                            calculationHistory.push({
+                                flowRate: result.flow_rates[minIndex] + " (Min)",
+                                mudDensity: densityValue,
+                                densityUnit: densityUnit.toUpperCase(),
+                                bitSize: data.bit_size,
+                                tfa: result.total_flow_area,
+                                pressureLoss: result.pressure_losses[minIndex],
+                                hsi: result.hsi_values[minIndex],
+                                impactForce: result.jet_impact_force_values[minIndex]
+                            });
+
+                            // Avg
+                            calculationHistory.push({
+                                flowRate: ((result.flow_rates[minIndex] + result.flow_rates[maxIndex]) / 2) + " (Avg)",
+                                mudDensity: densityValue,
+                                densityUnit: densityUnit.toUpperCase(),
+                                bitSize: data.bit_size,
+                                tfa: result.total_flow_area,
+                                pressureLoss: result.avg_pressure_loss,
+                                hsi: result.avg_hsi,
+                                impactForce: result.avg_jet_impact_force
+                            });
+
+                            // Max
+                            calculationHistory.push({
+                                flowRate: result.flow_rates[maxIndex] + " (Max)",
+                                mudDensity: densityValue,
+                                densityUnit: densityUnit.toUpperCase(),
+                                bitSize: data.bit_size,
+                                tfa: result.total_flow_area,
+                                pressureLoss: result.pressure_losses[maxIndex],
+                                hsi: result.hsi_values[maxIndex],
+                                impactForce: result.jet_impact_force_values[maxIndex]
+                            });
+                        }
                     } else {
                         // Show single value results
                         document.getElementById('charts').style.display = 'none';
                         document.getElementById('pressure_loss_value').textContent = result.pressure_loss;
                         document.getElementById('hsi_value').textContent = result.hsi;
                         document.getElementById('jet_impact_force_value').textContent = result.jet_impact_force;
+
+                        // Add to history
+                        calculationHistory.push({
+                            flowRate: flowRate.value,
+                            mudDensity: densityValue,
+                            densityUnit: densityUnit.toUpperCase(),
+                            bitSize: data.bit_size,
+                            tfa: result.total_flow_area,
+                            pressureLoss: result.pressure_loss,
+                            hsi: result.hsi,
+                            impactForce: result.jet_impact_force
+                        });
                     }
                     
                     document.getElementById('total_flow_area_value').textContent = result.total_flow_area;
                     document.getElementById('error').style.display = 'none';
+
+                    updateHistoryTable();
                 } else {
                     document.getElementById('error').textContent = result.error;
                     document.getElementById('error').style.display = 'block';
