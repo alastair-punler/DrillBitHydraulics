@@ -1,6 +1,8 @@
 ﻿# Drill Bit Hydraulics Calculator
-https://drillbithydraulics-production.up.railway.app/
+https://drillbithydraulics-production.up.railway.app/ (Production Server)
 A web-based calculator for determining pressure loss through drill bit nozzles and calculating Hydraulic Horsepower per Square Inch (HSI) in drilling operations.
+
+Test Server: https://drillbithydraulics-staging.up.railway.app/
 
 ## Overview
 
